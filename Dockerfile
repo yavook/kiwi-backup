@@ -3,44 +3,6 @@ LABEL maintainer="jmm@yavook.de"
 
 # Previous work: https://github.com/wernight/docker-duplicity
 
-ENV \
-    #################
-    # BACKUP POLICY #
-    #################
-    #
-    # when to run backups
-    # default: "36 03 * * *  " <=> daily at 3:36 am
-    SCHEDULE_BACKUP="36 03 * * *  " \
-    #
-    # when to remove failed transactions
-    # default: "36 04 * * *  " <=> daily at 04:36 am
-    SCHEDULE_CLEANUP="36 04 * * *  " \
-    #
-    # how often to opt for a full backup
-    # default: 4M <=> every 4 months
-    FULL_BACKUP_FREQUENCY=4M \
-    #
-    # how long to keep backups at all
-    # default: 9M <=> 9 months
-    BACKUP_RETENTION_TIME=9M \
-    #
-    # how many full backup chains with incrementals to keep
-    # default: 1
-    KEEP_NUM_FULL_CHAINS=1 \
-    \
-    ##################
-    # CRON SCHEDULES #
-    ##################
-    #
-    # when to remove old full backup chains
-    # default: "36 05 * * SAT" <=> every saturday at 05:36 am
-    SCHEDULE_RMFULL="36 05 * * SAT" \
-    #
-    # when to remove old incremental backups
-    # default: "36 05 * * SUN" <=> every sunday at 05:36 am
-    SCHEDULE_RMINCR="36 05 * * SUN"
-    
-
 RUN set -ex; \
     \
     apk add --no-cache \
@@ -112,8 +74,74 @@ RUN set -ex; \
     pip3 uninstall -y wheel; \
     apk del --purge .build-deps
 
-COPY run.sh /usr/local/bin/do-plicity
+VOLUME ["/backup/source", "/root/.cache/duplicity"]
 
-VOLUME ["/backup/source", "/backup/target", "/root/.cache/duplicity", "/root/.gnupg"]
+ENV \
+    #################
+    # BACKUP POLICY #
+    #################
+    #
+    # when to run backups
+    # default: "36 03 * * *" <=> daily at 3:36 am
+    SCHEDULE_BACKUP="36 03 * * *" \
+    #
+    # when to remove failed transactions
+    # default: "36 04 * * *" <=> daily at 04:36 am
+    SCHEDULE_CLEANUP="36 04 * * *" \
+    #
+    # how often to opt for a full backup
+    # default: 4M <=> every 4 months
+    FULL_BACKUP_FREQUENCY=4M \
+    #
+    # how long to keep backups at all
+    # default: 9M <=> 9 months
+    BACKUP_RETENTION_TIME=9M \
+    #
+    # how many full backup chains with incrementals to keep
+    # default: 1
+    KEEP_NUM_FULL_CHAINS=1 \
+    #
+    # where to put backups
+    # default: "file:///backup/target" <=> in a host-mounted volume
+    BACKUP_TARGET="file:///backup/target" \
+    \
+    ##############
+    # ENCRYPTION #
+    ##############
+    #
+    # GnuPG key-id as specified by https://www.gnupg.org/documentation/manpage.html#sec-2-6
+    GPG_KEY_ID="" \
+    #
+    GPG_PASSPHRASE="" \
+    \
+    ######################
+    # ADDITIONAL OPTIONS #
+    ######################
+    #
+    # when to remove old full backup chains
+    # default: "36 05 * * SAT" <=> every saturday at 05:36 am
+    SCHEDULE_RMFULL="36 05 * * SAT" \
+    #
+    # when to remove old incremental backups
+    # default: "36 05 * * SUN" <=> every sunday at 05:36 am
+    SCHEDULE_RMINCR="36 05 * * SUN" \
+    #
+    # size of individual duplicity data volumes
+    # default: 1024 <=> 1GiB
+    BACKUP_VOLSIZE=1024 \
+    #
+    # Additional options for "duplicity" command
+    OPTIONS_BACKUP="" \
+    #
+    # Additional options for "duplicity cleanup" command
+    OPTIONS_CLEANUP="" \
+    #
+    # Additional options for "duplicity remove-older-than" command
+    OPTIONS_RMFULL="" \
+    #
+    # Additional options for "duplicity remove-all-inc-of-but-n-full" command
+    OPTIONS_RMINCR=""
+
+COPY run.sh /usr/local/bin/do-plicity
 
 CMD ["do-plicity"]
