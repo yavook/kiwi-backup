@@ -55,7 +55,7 @@ backup:
   # ...
   environment:
     # ...
-    
+
     # when to run backups
     # default: "36 03 * * *" <=> daily at 03:36 am
     SCHEDULE_BACKUP: "36 03 * * *"
@@ -118,7 +118,95 @@ backup:
 
 ## Encryption
 
-For effective use of GnuPG encryption, you will need a custom `Dockerfile`.
+For effective use of GnuPG encryption, you will need a GnuPG key and a custom `Dockerfile`.
+
+### Creating a GnuPG key
+
+If you already have one key you want to use for this instance, skip this section.
+
+#### Preparation
+
+First, change to a safe directory, e.g. a new dir inside your home directory: `mkdir ~/kiwi-backup && cd ~/kiwi-backup`
+
+#### Generation
+
+Run key generation wizard using the following command and follow its directions:
+
+```sh
+docker run --rm -it -v "$(pwd)/gnupg:/root/.gnupg" ldericher/kiwi-backup gpg --full-generate-key
+```
+
+Good default choices for backup purposes are:
+
+* Kind of key: `1` (RSA/RSA)
+* Keysize `4096`
+* Validity `0` (doesn't expire), confirm with `y`
+* Real name `Administrator`
+* Email address `root@<your-hostname>`
+* Comment (empty)
+* Confirm with `O`
+* Input a passphrase (choose a secure password, it will be saved with your `kiwi-scp` instance!)
+
+#### Key-ID
+
+There's an output line `gpg: key 38CD19177F84710B marked as ultimately trusted` where `38CD19177F84710B` will be your Key-ID. If you lost it, you can list the keys using `gpg -k`:
+
+```sh
+docker run --rm -it -v "$(pwd)/gnupg:/root/.gnupg" ldericher/kiwi-backup gpg -k | grep -A1 '^pub'
+```
+
+Output:
+
+```
+pub   rsa4096 2020-08-27 [SC]
+      82BA35B0871675F78165618238CD19177F84710B
+```
+
+You can use the full fingerprint `82BA35B0871675F78165618238CD19177F84710B` or abbreviate to the last 16 digits `38CD19177F84710B`. Checking your Key-ID should succeed:
+
+```sh
+docker run --rm -it -v "$(pwd)/gnupg:/root/.gnupg" ldericher/kiwi-backup gpg --fingerprint 38CD19177F84710B
+```
+
+For more possibilities of what counts as a Key-ID, refer to [the relevant GnuPG manual section](https://www.gnupg.org/documentation/manuals/gnupg/Specify-a-User-ID.html)
+
+#### Export the key
+
+First, export the secret key.
+
+```sh
+docker run --rm -it -v "$(pwd)/gnupg:/root/.gnupg" -v "$(pwd)/gpg-export:/root/gpg-export" ldericher/kiwi-backup sh -c 'gpg --export-secret-keys --armor <Key-ID> > /root/gpg-export/secret.asc'
+```
+
+Then, export the trust value.
+
+```sh
+docker run --rm -it -v "$(pwd)/gnupg:/root/.gnupg" -v "$(pwd)/gpg-export:/root/gpg-export" ldericher/kiwi-backup sh -c 'gpg --export-ownertrust > /root/gpg-export/ownertrust.txt'
+```
+
+Optionally, spawn a fresh container to check your export:
+
+```sh
+docker run --rm -it -v "$(pwd)/gpg-export:/root/gpg-export:ro" ldericher/kiwi-backup sh
+```
+
+Inside the container, import the key. It should then appear in the list:
+
+```
+/ # gpg --import /root/gpg-export/secret.asc 
+[...]
+
+/ # gpg --import-ownertrust /root/gpg-export/ownertrust.txt 
+gpg: inserting ownertrust of 6
+
+/ # gpg -k
+[...]
+pub   rsa4096 2020-08-27 [SC]
+      82BA35B0871675F78165618238CD19177F84710B
+[...]
+```
+
+#### 
 
 ## Offsite Backups
 
