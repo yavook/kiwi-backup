@@ -77,18 +77,17 @@ RUN set -ex; \
     pip3 uninstall -y wheel; \
     apk del --purge .build-deps
 
-VOLUME ["/root/.cache/duplicity"]
+VOLUME ["/root/.cache/duplicity", "/backup/target"]
 
 ENV \
     #################
     # BACKUP POLICY #
     #################
-    SCHEDULE_BACKUP="36 03 * * *" \
+    SCHEDULE_BACKUP="36 02 * * *" \
     SCHEDULE_CLEANUP="36 04 * * *" \
-    FULL_BACKUP_FREQUENCY=4M \
-    BACKUP_RETENTION_TIME=9M \
-    KEEP_NUM_FULL_CHAINS=1 \
-    BACKUP_TARGET="file:///backup/target" \
+    FULL_BACKUP_FREQUENCY=3M \
+    BACKUP_RETENTION_TIME=6M \
+    KEEP_NUM_FULL_CHAINS=2 \
     \
     ######################
     # ADDITIONAL OPTIONS #
@@ -96,6 +95,7 @@ ENV \
     SCHEDULE_RMFULL="36 05 * * SAT" \
     SCHEDULE_RMINCR="36 05 * * SUN" \
     BACKUP_VOLSIZE=1024 \
+    BACKUP_TARGET="file:///backup/target" \
     OPTIONS_BACKUP="" \
     OPTIONS_CLEANUP="" \
     OPTIONS_RMFULL="" \
@@ -104,8 +104,6 @@ ENV \
     ##############
     # ENCRYPTION #
     ##############
-    #
-    # GnuPG key-id as specified by https://www.gnupg.org/documentation/manpage.html#sec-2-6
     GPG_KEY_ID="" \
     GPG_PASSPHRASE=""
 

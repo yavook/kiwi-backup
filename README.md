@@ -6,7 +6,9 @@ The backup solution for [`kiwi-scp`](https://github.com/ldericher/kiwi-scp)
 
 ## Quick start
 
-Assuming the backups should be kept locally in `/var/kiwi.backup`, just add this to one of your projects' `docker-compose.yml`.
+kiwi-backup is an image with [duplicity](http://duplicity.nongnu.org/), tailored to backup service data of `kiwi-scp` instances.
+
+If you want backups in the host directory `/var/kiwi.backup`, just add this to one of your projects' `docker-compose.yml` to use the default configuration.
 
 ```yaml
 backup:
@@ -16,14 +18,15 @@ backup:
     - "/var/kiwi.backup:/backup/target"
 ```
 
-This will use the default configuration.
-
 - backups the entire service data directory
 - stores all backup data on the host file system
-- daily incremental backups at night (03:36 am UTC; time chosen by fair dice roll)
-- a new full backup once every 4 months
-- keeps backups for up to 9 months 
-- keeps incremental backups for the most recent chain (4 months)
+- daily incremental backups at night 
+- a new full backup once every 3 months
+- keeps backups up to 6 months old
+- keeps daily backups for two recent sets (3-6 months)
+- backup jobs run at 02:36 am UTC (time chosen by fair dice roll)
+
+Be aware though -- backups will use a fair bit of storage space!
 
 ## Customization
 
@@ -33,18 +36,17 @@ Schedules in environment variables are to be provided [in cron notation](https:/
 
 ### Backup Scope
 
-kiwi-backup will backup everything in its `/backup/source` directory, and you should have no incentive to change that.
-
-To change the backup scope, just change what's mounted into that container directory:
+kiwi-backup will backup everything in its `/backup/source` directory -- change the backup scope by adjusting what's mounted into that container directory.
 
 ```yaml
 backup:
   # ...
   volumes:
-    - "$TARGETROOT:/backup/source:ro" # change me!
+    # change scope here!
+    - "$TARGETROOT:/backup/source:ro"
 ```
 
-You may of course create additional sources below in the `/backup/source` directory to limit the backup to specific projects or services. For added safety, mount your backup sources read-only by appending `:ro`.
+You may of course create additional sources below the `/backup/source` directory to limit the backup to specific projects or services. For added safety, mount your backup sources read-only by appending `:ro`.
 
 ### Backup policy
 
@@ -57,28 +59,24 @@ backup:
     # ...
 
     # when to run backups
-    # default: "36 03 * * *" <=> daily at 03:36 am
-    SCHEDULE_BACKUP: "36 03 * * *"
+    # default: daily at 02:36 am UTC
+    SCHEDULE_BACKUP: "36 02 * * *"
     
-    # when to remove failed transactions
-    # default: "36 04 * * *" <=> daily at 04:36 am
+    # when to remove leftovers from failed transactions
+    # default: daily at 04:36 am UTC
     SCHEDULE_CLEANUP: "36 04 * * *"
     
     # how often to opt for a full backup
-    # default: "4M" <=> every 4 months
-    FULL_BACKUP_FREQUENCY: "4M"
+    # default: every 3 months
+    FULL_BACKUP_FREQUENCY: "3M"
 
     # how long to keep backups at all
-    # default: "9M" <=> 9 months
-    BACKUP_RETENTION_TIME: "9M"
+    # default: 6 months
+    BACKUP_RETENTION_TIME: "6M"
     
     # how many full backup chains with incrementals to keep
-    # default: "1"
-    KEEP_NUM_FULL_CHAINS: "1"
-    
-    # where to put backups
-    # default: "file:///backup/target" <=> likely in a host-mounted volume
-    BACKUP_TARGET: "file:///backup/target"
+    # default: 2
+    KEEP_NUM_FULL_CHAINS: "2"
 ```
 
 ### Additional options
@@ -92,16 +90,20 @@ backup:
     # ...
 
     # when to remove old full backup chains
-    # default: "36 05 * * SAT" <=> every saturday at 05:36 am
+    # default: every saturday at 05:36 am UTC
     SCHEDULE_RMFULL: "36 05 * * SAT"
 
     # when to remove old incremental backups
-    # default: "36 05 * * SUN" <=> every sunday at 05:36 am
+    # default: every sunday at 05:36 am UTC
     SCHEDULE_RMINCR: "36 05 * * SUN"
     
     # size of individual duplicity data volumes
-    # default: "1024" <=> 1GiB
+    # default: 1GiB
     BACKUP_VOLSIZE: "1024"
+    
+    # where to put backups
+    # default: some docker volume
+    BACKUP_TARGET: "file:///backup/target"
     
     # Additional options for "duplicity --full-if-older-than" command
     OPTIONS_BACKUP: ""
@@ -124,7 +126,8 @@ For simplicity, this guide assumes you have a `kiwi-scp` instance with some proj
 
 ### GnuPG Key Generation
 
-> If you already have a key you want to use for this instance, skip this section.
+> You'll usually want to generate a new key for each `kiwi-scp` instance.
+> If you have reasons not to, skip this section.
 
 Reasonable defaults for a backup encryption key are:
 
@@ -133,83 +136,46 @@ Reasonable defaults for a backup encryption key are:
 * Doesn't expire
 * Secure passphrase (Don't bother memorizing it, you will save it in your `kiwi-scp` instance!)
 
-To quickly generate a key, use the following command, then enter your passphrase:
+To quickly generate a key, use the following command, then enter a passphrase:
 
 ```sh
-docker run --rm -it -v "$(pwd)/gnupg.tmp:/root/.gnupg" ldericher/kiwi-backup gpg --quick-gen-key --yes "Administrator <root@my-hostname.com>" rsa4096 encr never
+docker run --rm -it -v "gnupg.tmp:/root/.gnupg" ldericher/kiwi-backup gpg --quick-gen-key --yes "Administrator <root@my-hostname.com>" rsa4096 encr never
 ```
 
-This creates a subdirectory "gnupg.tmp" in the current working directory, which will be discarded later.
+To get a more in-depth generation wizard instead, use `gpg --full-gen-key` command without any more args and follow through.
 
-To get a more in-depth generation wizard instead, use the following command and follow its directions:
+### Export the generated key
+
+This one-liner exports your generated key into a new subdirectory "backup":
 
 ```sh
-docker run --rm -it -v "$(pwd)/gnupg.tmp:/root/.gnupg" ldericher/kiwi-backup gpg --full-gen-key
+docker run --rm -it -v "gnupg.tmp:/root/.gnupg" -v "$(pwd)/backup:/root/backup" -e "CURRENT_USER=$(id -u):$(id -g)" ldericher/kiwi-backup sh -c 'cd /root/backup && gpg --export-secret-keys --armor > secret.asc && gpg --export-ownertrust > ownertrust.txt && chown -R "${CURRENT_USER}" .'
 ```
 
-### Key-ID
-
-> If you already have a key you want to use for this instance, skip this section.
-
-During key generation, there's an output line `gpg: key 38CD19177F84710B marked as ultimately trusted` where `38CD19177F84710B` will be your Key-ID. If you lost it, you can list the keys using `gpg -k`:
+You'll now find the "backup" subdirectory with files "secret.asc" and "ownertrust.txt" in it. Check your exported files:
 
 ```sh
-docker run --rm -v "$(pwd)/gnupg.tmp:/root/.gnupg" ldericher/kiwi-backup gpg -k | grep -A1 '^pub'
+docker run --rm -v "$(pwd)/backup:/root/backup:ro" ldericher/kiwi-backup sh -c 'cd /root/backup && gpg --import --batch secret.asc 2>/dev/null && gpg --import-ownertrust ownertrust.txt 2>/dev/null && gpg -k 2>/dev/null | grep -A1 "^pub" | xargs | tail -c17'
 ```
 
-Output (shortened):
+This should output your 16-digit Key-ID, so take note of it if you haven't already! Afterwards, run `docker volume rm gnupg.tmp` to get rid of the key generation volume.
 
-```
-[...]
-pub   rsa4096 2020-08-27 [SC]
-      82BA35B0871675F78165618238CD19177F84710B
-```
+### Using a pre-generated key
 
-You can use the full fingerprint `82BA35B0871675F78165618238CD19177F84710B` or abbreviate to the last 16 digits `38CD19177F84710B`. Checking your Key-ID should succeed:
+To use a pre-generated key, you'll need to export it manually instead. These are the commands:
 
 ```sh
-docker run --rm -v "$(pwd)/gnupg.tmp:/root/.gnupg" ldericher/kiwi-backup gpg --fingerprint 38CD19177F84710B
+gpg --export-secret-keys --armor [Key-ID] > backup/secret.asc
+gpg --export-ownertrust > backup/ownertrust.txt
 ```
 
-For more possibilities of what counts as a Key-ID, refer to [the relevant GnuPG manual section](https://www.gnupg.org/documentation/manuals/gnupg/Specify-a-User-ID.html)
-
-### Export the key
-
-You now have a key to use for this instance. Export it into a new subdirectory "backup" in your project.
-
-The following one-liner extracts the data from the previously generated "gnupg.tmp" directory:
-
-```sh
-docker run --rm -it -v "$(pwd)/gnupg.tmp:/root/.gnupg" -v "$(pwd)/backup:/root/backup" -e "CURRENT_USER=$(id -u):$(id -g)" ldericher/kiwi-backup sh -c 'cd /root/backup && gpg --export-secret-keys --armor > secret.asc && gpg --export-ownertrust > ownertrust.txt && chown -R "${CURRENT_USER}" .'
-```
-
-You'll now find the "backup" subdirectory having files "secret.asc" and "ownertrust.txt" in it.
-
-If you did not generate your keys using the container and want to export them manually, use these commands:
-
-```sh
-gpg --export-secret-keys --armor [Key-ID] > /path/to/backup/secret.asc
-gpg --export-ownertrust > /path/to/backup/ownertrust.txt
-```
-
-Optionally, check your export:
+You can still check your exported files :)
 
 ```sh
 docker run --rm -v "$(pwd)/backup:/root/backup:ro" ldericher/kiwi-backup sh -c 'cd /root/backup && gpg --import --batch secret.asc && gpg --import-ownertrust ownertrust.txt && gpg -k'
 ```
 
-Output (shortened):
-
-```
-[...]
-pub   rsa4096 2020-08-27 [SC]
-      82BA35B0871675F78165618238CD19177F84710B
-uid           [ultimate] Administrator <root@my-hostname.com>
-```
-
 ### Describe local kiwi-backup image
-
-You now have a "backup" subdirectory containing your key export file and can safely discard a leftover "gnupg.tmp" subdirectory if applicable.
 
 Now create a simple `Dockerfile` inside the "backup" directory from following template.
 
@@ -218,38 +184,36 @@ FROM ldericher/kiwi-backup
 
 COPY secret.asc ownertrust.txt /root/
 
-RUN set -ex; \
-    \
-    gpg --import --batch /root/secret.asc; \
+RUN gpg --import --batch /root/secret.asc; \
     gpg --import-ownertrust /root/ownertrust.txt; \
     rm /root/secret.asc /root/ownertrust.txt
 
-# Obviously, change these values to match your data!
-ENV GPG_KEY_ID="38CD19177F84710B" \
+# fill in these values to match your data
+ENV GPG_KEY_ID="changeme" \
     GPG_PASSPHRASE="changeme"
 ```
 
-You should add the "backup" directory to the repository backing up your `kiwi-scp` instance.
+If applicable, commit the "backup" directory into the `kiwi-scp` instance repository.
 
 ### Use local image
 
-All that's left to do is come back to your project's `docker-compose.yml`, where you shorten one line. Old:
+All that's left is to come back to your project's `docker-compose.yml`, where you shorten one line. Change:
 
 ```yaml
 backup:
   image: ldericher/kiwi-backup
-  # [...]
+  # ...
 ```
 
-New:
+Into:
 
 ```yaml
 backup:
   build: ./backup
-  # [...]
+  # ...
 ```
 
-That's it! `kiwi-backup` will automatically start encrypting your new backups.
+That's it -- from now on, all new backups will be encrypted!
 
 ## Offsite Backups
 
