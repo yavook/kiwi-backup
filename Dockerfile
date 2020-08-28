@@ -107,6 +107,6 @@ ENV \
     GPG_KEY_ID="" \
     GPG_PASSPHRASE=""
 
-COPY run.sh /usr/local/bin/do-plicity
+COPY do-plicity /usr/local/bin/
 
 CMD ["do-plicity"]
