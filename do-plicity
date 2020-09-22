@@ -5,6 +5,7 @@
 #############
 
 # commands
+env_exe="$(command -v env)"
 ionice_exe="$(command -v ionice)"
 duplicity_exe="$(command -v duplicity)"
 
@@ -21,11 +22,12 @@ if [ -f "${duplicity_secrets_file}" ]; then
     . "${duplicity_secrets_file}"
 fi
 
+env_changes=""
+
 # check if uses encryption
 if [ -n "${GPG_KEY_ID}" ]; then
     # gpg key given
-    PASSPHRASE="${GPG_PASSPHRASE}"
-    export PASSPHRASE
+    env_changes="${env_changes} PASSPHRASE='${GPG_PASSPHRASE}'"
     encrypt_opts="--encrypt-key='${GPG_KEY_ID}'"
 else
     # no key given
@@ -35,8 +37,8 @@ fi
 # check if uses AWS
 if [ -n "${AWS_ACCESS_KEY_ID}" ]; then
     # export AWS credentials
-    export AWS_ACCESS_KEY_ID
-    export AWS_SECRET_ACCESS_KEY
+    env_changes="${env_changes} AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID}'"
+    env_changes="${env_changes} AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY}'"
 fi
 
 #############
@@ -65,7 +67,14 @@ print_command() {
     pc_task="${1}"
     shift 1
 
-    pc_cmdline="${ionice_exe} -c 3 ${duplicity_exe} ${encrypt_opts}"
+    # if environment should be changed, call with "env"
+    if [ -n "${env_changes}" ]; then
+        pc_cmdline="${env_exe}${env_changes} "
+    else
+        pc_cmdline=""
+    fi
+
+    pc_cmdline="${pc_cmdline}${ionice_exe} -c 3 ${duplicity_exe} ${encrypt_opts}"
 
     case "${pc_task}" in
         backup)
