@@ -79,6 +79,37 @@ backup:
     KEEP_NUM_FULL_CHAINS: "2"
 ```
 
+### Handling Secrets
+
+`duplicity` usually handles secrets by [reading its environment](http://duplicity.nongnu.org/vers7/duplicity.1.html#sect6). Some of its backends also accept secrets via environment, [notably the AWS S3 backend](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-envvars.html). 
+
+There are three major ways to for inject secrets into `kiwi-backup` environments:
+
+#### Container environment
+
+Just fire up your container using `docker run -e "FTP_PASSWORD=my_secret_here" ldericher/kiwi-backup`
+
+#### Image environment
+
+Create a simple `Dockerfile` from following template.
+
+```Dockerfile
+FROM ldericher/kiwi-backup
+ENV FTP_PASSWORD="my_secret_here"
+```
+
+#### "Secrets" file in container
+
+Create a shell script:
+
+```sh
+#!/bin/sh
+
+export FTP_PASSWORD="my_secret_here"
+```
+
+Then, include that file as `/root/duplicity_secrets` into your container by building a custom `Dockerfile` or by mounting it as a (read-only) volume.
+
 ### Additional options
 
 There's more environment variables for further customization. You'll likely know if you need to change these.
@@ -104,6 +135,9 @@ backup:
     # where to put backups
     # default: some docker volume
     BACKUP_TARGET: "file:///backup/target"
+    
+    # Additional options for all "duplicity" commands
+    OPTIONS_ALL: ""
     
     # Additional options for "duplicity --full-if-older-than" command
     OPTIONS_BACKUP: ""

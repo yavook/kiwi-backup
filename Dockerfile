@@ -96,6 +96,7 @@ ENV \
     SCHEDULE_RMINCR="36 05 * * SUN" \
     BACKUP_VOLSIZE=1024 \
     BACKUP_TARGET="file:///backup/target" \
+    OPTIONS_ALL="" \
     OPTIONS_BACKUP="" \
     OPTIONS_CLEANUP="" \
     OPTIONS_RMFULL="" \
