@@ -108,7 +108,7 @@ fi
 # check if uses encryption
 if [ -n "${GPG_KEY_ID}" ]; then
     # gpg key given
-    OPTIONS_ALL="$( append_options "${OPTIONS_ALL}" "--encrypt-key='${GPG_KEY_ID}'" )"
+    OPTIONS_ALL="$( append_options "${OPTIONS_ALL}" "--encrypt-key=${GPG_KEY_ID}" )"
 
     # handle more verbose "GPG_PASSPHRASE" env_var
     PASSPHRASE="${GPG_PASSPHRASE:-${PASSPHRASE}}"
