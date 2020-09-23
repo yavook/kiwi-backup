@@ -5,41 +5,12 @@
 #############
 
 # commands
-env_exe="$(command -v env)"
+this_exe="$(command -v "${0}")"
 ionice_exe="$(command -v ionice)"
 duplicity_exe="$(command -v duplicity)"
 
 # files
 duplicity_secrets_file='/root/duplicity_secrets'
-
-###############
-# ENVIRONMENT #
-###############
-
-# load secrets file
-if [ -f "${duplicity_secrets_file}" ]; then
-    # shellcheck disable=SC1090
-    . "${duplicity_secrets_file}"
-fi
-
-env_changes=""
-
-# check if uses encryption
-if [ -n "${GPG_KEY_ID}" ]; then
-    # gpg key given
-    env_changes="${env_changes} PASSPHRASE='${GPG_PASSPHRASE}'"
-    encrypt_opts="--encrypt-key='${GPG_KEY_ID}'"
-else
-    # no key given
-    encrypt_opts="--no-encryption"
-fi
-
-# check if uses AWS
-if [ -n "${AWS_ACCESS_KEY_ID}" ]; then
-    # export AWS credentials
-    env_changes="${env_changes} AWS_ACCESS_KEY_ID='${AWS_ACCESS_KEY_ID}'"
-    env_changes="${env_changes} AWS_SECRET_ACCESS_KEY='${AWS_SECRET_ACCESS_KEY}'"
-fi
 
 #############
 # FUNCTIONS #
@@ -50,15 +21,14 @@ append_options() {
     ao_options="${2}"
     shift 1
 
-    # remove leading whitespace characters
-    ao_options="${ao_options#"${ao_options%%[![:space:]]*}"}"
-    # remove trailing whitespace characters
-    ao_options="${ao_options%"${ao_options##*[![:space:]]}"}"
-
-    # if options are given, stitch together with a space
-    if [ -n "${ao_options}" ]; then
+    if [ -n "${ao_cmdline}" ] && [ -n "${ao_options}" ]; then
+        # if both are given, stitch together with a space
         echo "${ao_cmdline} ${ao_options}"
+    elif [ -n "${ao_options}" ]; then
+        # if only options are given, output them
+        echo "${ao_options}"
     else
+        # if at most a cmdline is given, output that
         echo "${ao_cmdline}"
     fi
 }
@@ -67,33 +37,30 @@ print_command() {
     pc_task="${1}"
     shift 1
 
-    # if environment should be changed, call with "env"
-    if [ -n "${env_changes}" ]; then
-        pc_cmdline="${env_exe}${env_changes} "
-    else
-        pc_cmdline=""
-    fi
-
-    pc_cmdline="${pc_cmdline}${ionice_exe} -c 3 ${duplicity_exe} ${encrypt_opts}"
+    pc_cmdline="${ionice_exe} -c 3 ${duplicity_exe}"
+    pc_cmdline="$( append_options "${pc_cmdline}" "${OPTIONS_ALL}" )"
 
     case "${pc_task}" in
         backup)
-            pc_cmdline="${pc_cmdline} --allow-source-mismatch --volsize ${BACKUP_VOLSIZE} --full-if-older-than ${FULL_BACKUP_FREQUENCY}"
-            pc_cmdline="$( append_options "${pc_cmdline}" "${OPTIONS_BACKUP} /backup/source" )"
+            pc_cmdline="$( append_options "${pc_cmdline}" "--allow-source-mismatch" )"
+            pc_cmdline="$( append_options "${pc_cmdline}" "--volsize ${BACKUP_VOLSIZE}" )"
+            pc_cmdline="$( append_options "${pc_cmdline}" "--full-if-older-than ${FULL_BACKUP_FREQUENCY}" )"
+            pc_cmdline="$( append_options "${pc_cmdline}" "${OPTIONS_BACKUP}" )"
+            pc_cmdline="$( append_options "${pc_cmdline}" "/backup/source" )"
             ;;
         
         cleanup)
-            pc_cmdline="${pc_cmdline} cleanup --force"
+            pc_cmdline="$( append_options "${pc_cmdline}" "cleanup --force" )"
             pc_cmdline="$( append_options "${pc_cmdline}" "${OPTIONS_CLEAN}" )"
             ;;
         
         rmfull)
-            pc_cmdline="${pc_cmdline} remove-older-than ${BACKUP_RETENTION_TIME} --force"
+            pc_cmdline="$( append_options "${pc_cmdline}" "remove-older-than ${BACKUP_RETENTION_TIME} --force" )"
             pc_cmdline="$( append_options "${pc_cmdline}" "${OPTIONS_RMFULL}" )"
             ;;
         
         rmincr)
-            pc_cmdline="${pc_cmdline} remove-all-inc-of-but-n-full ${KEEP_NUM_FULL_CHAINS} --force"
+            pc_cmdline="$( append_options "${pc_cmdline}" "remove-all-inc-of-but-n-full ${KEEP_NUM_FULL_CHAINS} --force" )"
             pc_cmdline="$( append_options "${pc_cmdline}" "${OPTIONS_RMINCR}" )"
             ;;
     esac
@@ -122,42 +89,86 @@ print_crontab() {
     # don't split the '#' from 'min'
     print_cron_schedule '#_min hour day month weekday' 'command' | tr '_' ' '
 
-    print_cron_schedule "${SCHEDULE_BACKUP}"  "$( print_command backup )"
-    print_cron_schedule "${SCHEDULE_CLEANUP}" "$( print_command cleanup )"
-    print_cron_schedule "${SCHEDULE_RMFULL}"  "$( print_command rmfull )"
-    print_cron_schedule "${SCHEDULE_RMINCR}"  "$( print_command rmincr )"
+    print_cron_schedule "${SCHEDULE_BACKUP}"  "${this_exe} backup"
+    print_cron_schedule "${SCHEDULE_CLEANUP}" "${this_exe} cleanup"
+    print_cron_schedule "${SCHEDULE_RMFULL}"  "${this_exe} rmfull"
+    print_cron_schedule "${SCHEDULE_RMINCR}"  "${this_exe} rmincr"
 }
+
+###############
+# ENVIRONMENT #
+###############
+
+# load secrets file
+if [ -f "${duplicity_secrets_file}" ]; then
+    # shellcheck disable=SC1090
+    . "${duplicity_secrets_file}"
+fi
+
+# check if uses encryption
+if [ -n "${GPG_KEY_ID}" ]; then
+    # gpg key given
+    OPTIONS_ALL="$( append_options "${OPTIONS_ALL}" "--encrypt-key='${GPG_KEY_ID}'" )"
+
+    # handle more verbose "GPG_PASSPHRASE" env_var
+    PASSPHRASE="${GPG_PASSPHRASE:-${PASSPHRASE}}"
+    export PASSPHRASE
+    unset GPG_PASSPHRASE
+else
+    # no key given
+    OPTIONS_ALL="$( append_options "${OPTIONS_ALL}" "--no-encryption" )"
+fi
 
 ########
 # MAIN #
 ########
 
-
 if [ "${#}" -gt 0 ]; then
-    # run a command
-    case "${1}" in
-        print-crontab)
-            print_crontab
+
+    # CLI
+    task="${1}"
+    shift 1
+
+    # run task
+    case "${task}" in
+        print-*)
+            task="${task##*-}"
+
+            case "${task}" in
+                # print out the crontab
+                crontab)
+                    print_crontab
+                    ;;
+                
+                # print out a task
+                backup|cleanup|rmfull|rmincr)
+                    print_command "${task}"
+                    ;;
+
+                # unknown task
+                *)
+                    >&2 echo "Cannot print '${task}'."
+                    >&2 echo "Choose from: crontab, backup, cleanup, rmfull, rmincr"
+                    exit 1
+                    ;;
+            esac
             ;;
 
-        print-backup|print-cleanup|print-rmfull|print-rmincr)
-            print_command "${1##*-}"
-            ;;
-
-        # execute single command
+        # execute single task
         backup|cleanup|rmfull|rmincr)
-            print_command "${1}"
-            cmd="$(print_command "${1}")"
-            ${cmd}
+            # shellcheck disable=SC2091
+            $(print_command "${task}")
             ;;
 
+        # unknown task
         *)
-            >&2 echo "Unknown command '${1}'."
+            >&2 echo "Unknown task '${task}'."
+            >&2 echo "Choose from: backup, cleanup, rmfull, rmincr"
             exit 1
             ;;
     esac
-
 else
+
     # default run: replace crontab, then start crond
     print_crontab | crontab -
     crond -fl 8
