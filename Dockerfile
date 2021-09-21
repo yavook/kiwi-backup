@@ -1,4 +1,4 @@
-FROM python:3.9-alpine
+FROM python:3.9-alpine3.13
 LABEL maintainer="jmm@yavook.de"
 
 # Previous work: https://github.com/wernight/docker-duplicity
