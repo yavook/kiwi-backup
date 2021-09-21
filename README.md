@@ -1,5 +1,7 @@
 # kiwi-backup
 
+[![Build Status](https://github.drone.yavook.de/api/badges/ldericher/kiwi-backup/status.svg)](https://github.drone.yavook.de/ldericher/kiwi-backup)
+
 > `kiwi` - simple, consistent, powerful
 
 The backup solution for [`kiwi-scp`](https://github.com/ldericher/kiwi-scp)
