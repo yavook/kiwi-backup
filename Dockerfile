@@ -1,4 +1,4 @@
-FROM alpine:3.12
+FROM python:3.9-alpine
 LABEL maintainer="jmm@yavook.de"
 
 # Previous work: https://github.com/wernight/docker-duplicity
@@ -8,7 +8,7 @@ RUN set -ex; \
     # create backup source
     mkdir -p /backup/source; \
     \
-    apk add --no-cache \
+    apk --no-cache add \
         ca-certificates \
         gettext \
         gnupg \
@@ -17,17 +17,14 @@ RUN set -ex; \
         librsync \
         libxml2 \
         libxslt \
-        openssh \
+        openssh-client \
         openssl \
-        python3 \
-        py3-pip \
-        py3-six \
         rsync \
     ; \
     update-ca-certificates; \
     \
     # dependencies to build python packages
-    apk add --no-cache -t .build-deps \
+    apk --no-cache add --virtual .build-deps \
         gcc \
         libffi-dev \
         librsync-dev \
@@ -36,13 +33,12 @@ RUN set -ex; \
         make \
         musl-dev \
         openssl-dev \
-        python3-dev \
     ; \
     \
     # make use of "wheel" python packages
-    pip3 install wheel ; \
+    pip3 --no-cache-dir install wheel ; \
     \
-    pip3 install \
+    pip3 --no-cache-dir install \
         # main app
         duplicity \
         \
@@ -74,7 +70,7 @@ RUN set -ex; \
     ; \
     \
     # remove buildtime dependencies
-    pip3 uninstall -y wheel; \
+    pip3 --no-cache-dir uninstall -y wheel; \
     apk del --purge .build-deps
 
 VOLUME ["/root/.cache/duplicity", "/backup/target"]
