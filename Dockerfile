@@ -1,11 +1,14 @@
 FROM yavook/kiwi-cron:0.1
 LABEL maintainer="jmm@yavook.de"
 
+COPY requirements.txt /tmp/
+
 RUN set -ex; \
     \
     # create backup source
     mkdir -p /backup/source; \
     \
+    # duplicity software dependencies
     apk --no-cache add \
         ca-certificates \
         gettext \
@@ -20,11 +23,7 @@ RUN set -ex; \
         python3 \
         rsync \
     ; \
-    update-ca-certificates;
-
-COPY requirements.txt /tmp/
-
-RUN set -ex; \
+    update-ca-certificates; \
     \
     # python packages buildtime dependencies
     apk --no-cache add --virtual .build-deps \
@@ -60,22 +59,22 @@ RUN set -ex; \
     ; \
     apk del --purge .build-deps; \
     rm -f "/tmp/requirements.txt"; \
-    rm -rf "${HOME}/.cargo";
-
-# create non-root user
-RUN adduser -D -u 1368 duplicity;
+    rm -rf "${HOME}/.cargo"; \
+    \
+    # create a non-root user
+    adduser -D -u 1368 duplicity;
 
 USER duplicity
 
 RUN set -ex; \
     \
+    # confirm duplicity is working
+    duplicity --version; \
+    \
     mkdir -p "${HOME}/.cache/duplicity"; \
     mkdir -pm 600 "${HOME}/.gnupg";
 
 VOLUME [ "/home/duplicity/.cache/duplicity" ]
-
-# confirm duplicity is working
-RUN duplicity --version
 
 ENV \
     #################
@@ -106,4 +105,5 @@ ENV \
     GPG_KEY_ID="" \
     GPG_PASSPHRASE=""
 
-CMD ["do-plicity"]
+COPY bin /usr/local/bin/
+COPY libexec /usr/local/libexec/

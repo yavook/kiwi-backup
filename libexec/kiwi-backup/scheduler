@@ -1,0 +1,9 @@
+#!/bin/sh
+
+this_script="$( readlink -f "${0}" )"
+this_dir="${this_script%/*}"
+
+echo "${SCHEDULE_BACKUP}"  "$( "${this_dir}/build_command" backup )"
+echo "${SCHEDULE_CLEANUP}" "$( "${this_dir}/build_command" cleanup )"
+echo "${SCHEDULE_RMFULL}"  "$( "${this_dir}/build_command" rmfull )"
+echo "${SCHEDULE_RMINCR}"  "$( "${this_dir}/build_command" rmincr )"
