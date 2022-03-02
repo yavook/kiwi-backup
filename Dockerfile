@@ -1,4 +1,4 @@
-FROM python:3.9-alpine3.13
+FROM yavook/kiwi-cron:0.1 AS deps
 LABEL maintainer="jmm@yavook.de"
 
 # Previous work: https://github.com/wernight/docker-duplicity
@@ -19,13 +19,19 @@ RUN set -ex; \
         libxslt \
         openssh-client \
         openssl \
+        python3 \
         rsync \
     ; \
-    update-ca-certificates; \
+    update-ca-certificates;
+
+COPY requirements.txt /tmp/
+
+RUN set -ex; \
     \
-    # dependencies to build python packages
+    # python packages buildtime dependencies
     apk --no-cache add --virtual .build-deps \
         gcc \
+        git \
         libffi-dev \
         librsync-dev \
         libxml2-dev \
@@ -33,47 +39,41 @@ RUN set -ex; \
         make \
         musl-dev \
         openssl-dev \
+        python3-dev \
+        py3-pip \
+        cargo \
+    ; \
+    # make use of prebuilt wheels where possible
+    python3 -m pip --no-cache-dir \
+        install wheel \
     ; \
     \
-    # make use of "wheel" python packages
-    pip3 --no-cache-dir install wheel ; \
-    \
-    pip3 --no-cache-dir install \
-        # main app
-        duplicity \
-        \
-        # general duplicity requirements, based on
-        # http://duplicity.nongnu.org/vers8/README
-        # https://git.launchpad.net/duplicity/tree/requirements.txt
-        fasteners \
-        future \
-        mock \
-        paramiko \
-        python-gettext \
-        requests \
-        urllib3 \
-        \
-        # backend requirements
-        azure-mgmt-storage \
-        b2sdk \
-        boto \
-        boto3 \
-        dropbox \
-        gdata \
-        jottalib \
-        mediafire \
-        mega.py \
-        pydrive \
-        pyrax \
-        python-swiftclient \
-        requests_oauthlib \
+    python3 -m pip --no-cache-dir \
+        install -r /tmp/requirements.txt \
     ; \
     \
     # remove buildtime dependencies
-    pip3 --no-cache-dir uninstall -y wheel; \
-    apk del --purge .build-deps
+    python3 -m pip --no-cache-dir \
+        uninstall -y wheel \
+    ; \
+    apk del --purge .build-deps;
 
-VOLUME ["/root/.cache/duplicity", "/backup/target"]
+RUN set -ex; \
+    \
+    # create non-root user
+    adduser -D -u 1368 duplicity; \
+    mkdir -p /home/duplicity/.cache/duplicity; \
+    mkdir -p /home/duplicity/.gnupg; \
+    chmod -R go+rwx /home/duplicity/;
+
+USER duplicity
+
+VOLUME [ "/home/duplicity/.cache/duplicity" ]
+
+# confirm this is working
+RUN set -ex; \
+    \
+    duplicity --version
 
 ENV \
     #################
@@ -103,7 +103,5 @@ ENV \
     ##############
     GPG_KEY_ID="" \
     GPG_PASSPHRASE=""
-
-COPY do-plicity /usr/local/bin/
 
 CMD ["do-plicity"]
