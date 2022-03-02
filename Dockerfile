@@ -61,22 +61,20 @@ RUN set -ex; \
     apk del --purge .build-deps; \
     rm -rf "${USER}/.cargo";
 
-RUN set -ex; \
-    \
-    # create non-root user
-    adduser -D -u 1368 duplicity; \
-    mkdir -p /home/duplicity/.cache/duplicity; \
-    mkdir -p /home/duplicity/.gnupg; \
-    chmod -R go+rwx /home/duplicity/;
+# create non-root user
+RUN adduser -D -u 1368 duplicity;
 
 USER duplicity
 
-VOLUME [ "/home/duplicity/.cache/duplicity" ]
-
-# confirm this is working
 RUN set -ex; \
     \
-    duplicity --version
+    mkdir -p "${HOME}/.cache/duplicity"; \
+    mkdir -pm 600 "${HOME}/.gnupg";
+
+VOLUME [ "/home/duplicity/.cache/duplicity" ]
+
+# confirm duplicity is working
+RUN duplicity --version
 
 ENV \
     #################
