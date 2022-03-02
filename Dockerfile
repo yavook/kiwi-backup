@@ -1,8 +1,6 @@
 FROM yavook/kiwi-cron:0.1 AS deps
 LABEL maintainer="jmm@yavook.de"
 
-# Previous work: https://github.com/wernight/docker-duplicity
-
 RUN set -ex; \
     \
     # create backup source
@@ -48,15 +46,20 @@ RUN set -ex; \
         install wheel \
     ; \
     \
+    # install duplicity
     python3 -m pip --no-cache-dir \
         install -r /tmp/requirements.txt \
+    ; \
+    python3 -m pip --no-cache-dir \
+        install duplicity \
     ; \
     \
     # remove buildtime dependencies
     python3 -m pip --no-cache-dir \
         uninstall -y wheel \
     ; \
-    apk del --purge .build-deps;
+    apk del --purge .build-deps; \
+    rm -rf "${USER}/.cargo";
 
 RUN set -ex; \
     \

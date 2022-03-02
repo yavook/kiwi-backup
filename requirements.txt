@@ -1,7 +1,3 @@
-##### main app #####
-
-duplicity==0.8.21
-
 # dependencies as per 
 # https://gitlab.com/duplicity/duplicity/-/blob/rel.0.8.21/requirements.txt
 
