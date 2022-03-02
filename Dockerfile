@@ -5,9 +5,6 @@ COPY requirements.txt /tmp/
 
 RUN set -ex; \
     \
-    # create backup source
-    mkdir -p /backup/source; \
-    \
     # duplicity software dependencies
     apk --no-cache add \
         ca-certificates \
@@ -59,22 +56,29 @@ RUN set -ex; \
     ; \
     apk del --purge .build-deps; \
     rm -f "/tmp/requirements.txt"; \
-    rm -rf "${HOME}/.cargo"; \
-    \
-    # create a non-root user
-    adduser -D -u 1368 duplicity;
-
-USER duplicity
+    rm -rf "${HOME}/.cargo";
 
 RUN set -ex; \
     \
-    # confirm duplicity is working
-    duplicity --version; \
+    # create /kiwi-backup directories tree
+    mkdir -m 777 /kiwi-backup; \
+    mkdir -m 777 /kiwi-backup/source; \
+    mkdir -m 777 /kiwi-backup/target; \
+    \
+    # create a non-root user
+    adduser -D -u 1368 kiwi-backup;
+
+USER kiwi-backup
+
+RUN set -ex; \
     \
     mkdir -p "${HOME}/.cache/duplicity"; \
-    mkdir -pm 600 "${HOME}/.gnupg";
+    mkdir -pm 700 "${HOME}/.gnupg"; \
+    \
+    # confirm duplicity is working
+    duplicity --version;
 
-VOLUME [ "/home/duplicity/.cache/duplicity" ]
+VOLUME [ "/home/kiwi-backup/.cache/duplicity" ]
 
 ENV \
     #################
@@ -92,7 +96,8 @@ ENV \
     SCHEDULE_RMFULL="36 05 * * SAT" \
     SCHEDULE_RMINCR="36 05 * * SUN" \
     BACKUP_VOLSIZE=1024 \
-    BACKUP_TARGET="file:///backup/target" \
+    BACKUP_SOURCE="/kiwi-backup/source" \
+    BACKUP_TARGET="file:///kiwi-backup/target" \
     OPTIONS_ALL="" \
     OPTIONS_BACKUP="" \
     OPTIONS_CLEANUP="" \
@@ -107,3 +112,5 @@ ENV \
 
 COPY bin /usr/local/bin/
 COPY libexec /usr/local/libexec/
+
+CMD [ "kiwi-backup" ]

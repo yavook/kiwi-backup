@@ -56,7 +56,7 @@ case "${task}" in
     printf ' --volsize %s' "${BACKUP_VOLSIZE}"
     printf ' --full-if-older-than %s' "${FULL_BACKUP_FREQUENCY}"
     printf '%s' "$( add_space "${OPTIONS_BACKUP}" )"
-    printf ' /backup/source'
+    printf ' %s' "${BACKUP_SOURCE}"
     ;;
 
   cleanup)
