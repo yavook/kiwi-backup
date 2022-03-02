@@ -53,8 +53,8 @@ printf "%s -c 3 %s%s %s" \
 case "${task}" in
   backup)
     printf ' --allow-source-mismatch'
-    printf ' --volsize'
-    printf ' --full-if-older-than'
+    printf ' --volsize %s' "${BACKUP_VOLSIZE}"
+    printf ' --full-if-older-than %s' "${FULL_BACKUP_FREQUENCY}"
     printf '%s' "$( add_space "${OPTIONS_BACKUP}" )"
     printf ' /backup/source'
     ;;
