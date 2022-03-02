@@ -9,7 +9,7 @@ ionice_exe="$(command -v ionice)"
 duplicity_exe="$(command -v duplicity)"
 
 # files
-duplicity_secrets_file="${HOME}/duplicity_secrets"
+duplicity_secrets_file="/root/duplicity_secrets"
 
 ########
 # MAIN #

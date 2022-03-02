@@ -1,8 +1,9 @@
-FROM yavook/kiwi-cron:0.1
+FROM yavook/kiwi-cron:0.2
 LABEL maintainer="jmm@yavook.de"
 
 COPY requirements.txt /tmp/
 
+# full install of duplicity distribution
 RUN set -ex; \
     \
     # duplicity software dependencies
@@ -50,7 +51,7 @@ RUN set -ex; \
         install duplicity \
     ; \
     \
-    # remove buildtime dependencies
+    # cleanup
     python3 -m pip --no-cache-dir \
         uninstall -y wheel \
     ; \
@@ -58,34 +59,30 @@ RUN set -ex; \
     rm -f "/tmp/requirements.txt"; \
     rm -rf "${HOME}/.cargo";
 
+# start of kiwi additions here
 RUN set -ex; \
     \
-    # create /kiwi-backup directories tree
+    # create /kiwi-backup directory structure
     mkdir -m 777 /kiwi-backup; \
     mkdir -m 777 /kiwi-backup/source; \
     mkdir -m 777 /kiwi-backup/target; \
     \
-    # create a non-root user
-    adduser -D -u 1368 kiwi-backup;
-
-USER kiwi-backup
-
-RUN set -ex; \
-    \
-    mkdir -p "${HOME}/.cache/duplicity"; \
-    mkdir -pm 700 "${HOME}/.gnupg"; \
+    # we need to run as root in container.
+    # otherwise, we might miss directories in backup source!
+    mkdir -p "/root/.cache/duplicity"; \
+    mkdir -pm 700 "/root/.gnupg"; \
     \
     # confirm duplicity is working
     duplicity --version;
 
-VOLUME [ "/home/kiwi-backup/.cache/duplicity" ]
+VOLUME [ "/root/.cache/duplicity" ]
 
 ENV \
     #################
     # BACKUP POLICY #
     #################
-    SCHEDULE_BACKUP="36 02 * * *" \
-    SCHEDULE_CLEANUP="36 04 * * *" \
+    SCHEDULE_BACKUP="R 02 * * *" \
+    SCHEDULE_CLEANUP="R 04 * * *" \
     FULL_BACKUP_FREQUENCY=3M \
     BACKUP_RETENTION_TIME=6M \
     KEEP_NUM_FULL_CHAINS=2 \
@@ -93,8 +90,8 @@ ENV \
     ######################
     # ADDITIONAL OPTIONS #
     ######################
-    SCHEDULE_RMFULL="36 05 * * SAT" \
-    SCHEDULE_RMINCR="36 05 * * SUN" \
+    SCHEDULE_RMFULL="R 05 * * SAT" \
+    SCHEDULE_RMINCR="R 05 * * SUN" \
     BACKUP_VOLSIZE=1024 \
     BACKUP_SOURCE="/kiwi-backup/source" \
     BACKUP_TARGET="file:///kiwi-backup/target" \
