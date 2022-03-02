@@ -59,7 +59,7 @@ RUN set -ex; \
         uninstall -y wheel \
     ; \
     apk del --purge .build-deps; \
-    rm -rf "${USER}/.cargo";
+    rm -rf "${HOME}/.cargo";
 
 # create non-root user
 RUN adduser -D -u 1368 duplicity;
