@@ -59,6 +59,7 @@ RUN set -ex; \
         uninstall -y wheel \
     ; \
     apk del --purge .build-deps; \
+    rm -f "/tmp/requirements.txt"; \
     rm -rf "${HOME}/.cargo";
 
 # create non-root user
