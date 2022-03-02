@@ -1,4 +1,4 @@
-FROM yavook/kiwi-cron:0.1 AS deps
+FROM yavook/kiwi-cron:0.1
 LABEL maintainer="jmm@yavook.de"
 
 RUN set -ex; \
