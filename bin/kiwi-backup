@@ -1,0 +1,5 @@
+#!/bin/sh
+
+exec /usr/local/libexec/kiwi-cron/run_cron \
+  "${@}" \
+  /usr/local/libexec/kiwi-backup/scheduler

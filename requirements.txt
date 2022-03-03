@@ -1,0 +1,38 @@
+# dependencies as per 
+# https://gitlab.com/duplicity/duplicity/-/blob/rel.0.8.21/requirements.txt
+
+##### basic requirements #####
+
+fasteners
+future
+python-gettext
+setuptools>=44.1.1
+setuptools-scm>=5.0.2
+
+
+##### backend libraries #####
+
+azure-storage-blob      ; python_version >= '3.6'
+b2sdk                   ; python_version >= '3.6'
+boto
+boto3
+boxsdk[jwt]             ; python_version >= '3.6'
+dropbox
+gdata                   ; python_version == '2.7'
+gdata-python3           ; python_version >= '3.6'
+google-api-python-client
+google-auth-oauthlib
+jottalib
+keyring
+mediafire
+megatools               ; python_version >= '3.6'
+paramiko
+pexpect
+psutil
+pydrive                 ; python_version >= '3.6'
+pydrive2                ; python_version >= '3.6'
+pyrax                   ; python_version >= '3.6'
+python-swiftclient
+python-keystoneclient
+requests
+requests-oauthlib

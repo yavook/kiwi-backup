@@ -1,0 +1,81 @@
+#!/bin/sh
+
+#############
+# CONSTANTS #
+#############
+
+# commands
+ionice_exe="$(command -v ionice)"
+duplicity_exe="$(command -v duplicity)"
+
+# files
+duplicity_secrets_file="/root/duplicity_secrets"
+
+########
+# MAIN #
+########
+
+# load secrets file
+if [ -f "${duplicity_secrets_file}" ]; then
+    # shellcheck disable=SC1090
+    . "${duplicity_secrets_file}"
+fi
+
+# check if uses encryption
+if [ -n "${GPG_KEY_ID}" ]; then
+    # gpg key given
+    options_encryption="--encrypt-key=${GPG_KEY_ID}"
+
+    # handle more verbose "GPG_PASSPHRASE" env_var
+    PASSPHRASE="${GPG_PASSPHRASE:-${PASSPHRASE}}"
+    export PASSPHRASE
+    unset GPG_PASSPHRASE
+else
+    # no key given
+    options_encryption="--no-encryption"
+fi
+
+task="${1}"
+shift 1
+
+add_space () {
+  if [ -n "${1}" ]; then
+    echo " ${1}"
+  fi
+}
+
+printf "%s -c 3 %s%s %s" \
+  "${ionice_exe}" \
+  "${duplicity_exe}" \
+  "$( add_space "${OPTIONS_ALL}" )" \
+  "${options_encryption}"
+
+case "${task}" in
+  backup)
+    printf ' --allow-source-mismatch'
+    printf ' --volsize %s' "${BACKUP_VOLSIZE}"
+    printf ' --full-if-older-than %s' "${FULL_BACKUP_FREQUENCY}"
+    printf '%s' "$( add_space "${OPTIONS_BACKUP}" )"
+    printf ' %s' "${BACKUP_SOURCE}"
+    ;;
+
+  cleanup)
+    printf ' cleanup'
+    printf ' --force'
+    printf '%s' "$( add_space "${OPTIONS_CLEAN}" )"
+    ;;
+
+  rmfull)
+    printf ' remove-older-than %s' "${BACKUP_RETENTION_TIME}"
+    printf ' --force'
+    printf '%s' "$( add_space "${OPTIONS_RMFULL}" )"
+    ;;
+
+  rmincr)
+    printf ' remove-all-inc-of-but-n-full %s' "${KEEP_NUM_FULL_CHAINS}"
+    printf ' --force'
+    printf '%s' "$( add_space "${OPTIONS_RMINCR}" )"
+    ;;
+esac
+
+echo " ${BACKUP_TARGET}"
