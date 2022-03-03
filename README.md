@@ -4,20 +4,20 @@
 
 > `kiwi` - simple, consistent, powerful
 
-The backup solution for [`kiwi-scp`](https://github.com/yavook/kiwi-scp)
+The backup solution for [`kiwi-scp`](https://github.com/yavook/kiwi-scp). Also [on Docker Hub](https://hub.docker.com/r/yavook/kiwi-backup).
 
 ## Quick start
 
-kiwi-backup is an image with [duplicity](http://duplicity.nongnu.org/), tailored to backup service data of `kiwi-scp` instances.
+kiwi-backup is an image with [duplicity](https://duplicity.gitlab.io/duplicity-web/), tailored to backup service data of `kiwi-scp` instances.
 
 If you want backups in the host directory `/var/local/kiwi.backup`, just add this to one of your projects' `docker-compose.yml` to use the default configuration.
 
 ```yaml
 backup:
-  image: yavook/kiwi-backup
+  image: yavook/kiwi-backup:0.10
   volumes:
-    - "${KIWI_INSTANCE}:/backup/source:ro"
-    - "/var/local/kiwi.backup:/backup/target"
+    - "${KIWI_INSTANCE}:/kiwi-backup/source:ro"
+    - "/var/local/kiwi.backup:/kiwi-backup/target"
 ```
 
 - backups the entire service data directory
@@ -26,7 +26,7 @@ backup:
 - a new full backup once every 3 months
 - keeps backups up to 6 months old
 - keeps daily backups for two recent sets (3-6 months)
-- backup jobs run at 02:36 am UTC (time chosen by fair dice roll)
+- backup jobs run at a random minute past 2 am
 
 Be aware though -- backups will use a fair bit of storage space!
 
@@ -34,21 +34,27 @@ Be aware though -- backups will use a fair bit of storage space!
 
 The kiwi-backup image allows for extensive customization even without creating a local image variant.
 
-Schedules in environment variables are to be provided [in cron notation](https://crontab.guru/).
+Schedules in environment variables are to be provided [in cron notation](https://crontab.guru/). Additionally, the special value "R" is supported and will be replaced by a random value.
+
+### Time Zones
+
+Being based on [`kiwi-cron`](https://github.com/yavook/kiwi-cron), `kiwi-backup` makes changing time zones easy. Just change the container environment variable `TZ` to your liking, e.g. "Europe/Berlin".
 
 ### Backup Scope
 
-kiwi-backup will backup everything in its `/backup/source` directory -- change the backup scope by adjusting what's mounted into that container directory.
+kiwi-backup will backup everything in its `/kiwi-backup/source` directory -- change the backup scope by adjusting what's mounted into that container directory.
 
 ```yaml
 backup:
   # ...
   volumes:
     # change scope here!
-    - "${KIWI_INSTANCE}:/backup/source:ro"
+    - "${KIWI_INSTANCE}:/kiwi-backup/source:ro"
 ```
 
-You may of course create additional sources below the `/backup/source` directory to limit the backup to specific projects or services. For added safety, mount your backup sources read-only by appending `:ro`.
+You may of course create additional sources below the `/kiwi-backup/source` directory to limit the backup to specific projects or services. For added safety, mount your backup source(s) read-only by appending `:ro`.
+
+You may also change the container environment variable `BACKUP_SOURCE`, though this is discouraged.
 
 ### Backup policy
 
@@ -61,12 +67,12 @@ backup:
     # ...
 
     # when to run backups
-    # default: daily at 02:36 am UTC
-    SCHEDULE_BACKUP: "36 02 * * *"
+    # default: daily at a random minute past 2 am
+    SCHEDULE_BACKUP: "R 2 * * *"
     
     # when to remove leftovers from failed transactions
-    # default: daily at 04:36 am UTC
-    SCHEDULE_CLEANUP: "36 04 * * *"
+    # default: daily at a random minute past 4 am
+    SCHEDULE_CLEANUP: "R 4 * * *"
     
     # how often to opt for a full backup
     # default: every 3 months
@@ -89,14 +95,14 @@ There are three major ways to for inject secrets into `kiwi-backup` environments
 
 #### Container environment
 
-Just fire up your container using `docker run -e "FTP_PASSWORD=my_secret_here" yavook/kiwi-backup`
+Just fire up your container using `docker run -e "FTP_PASSWORD=my_secret_here" yavook/kiwi-backup:0.10`
 
 #### Image environment
 
 Create a simple `Dockerfile` from following template.
 
 ```Dockerfile
-FROM yavook/kiwi-backup
+FROM yavook/kiwi-backup:0.10
 ENV FTP_PASSWORD="my_secret_here"
 ```
 
@@ -123,20 +129,24 @@ backup:
     # ...
 
     # when to remove old full backup chains
-    # default: every saturday at 05:36 am UTC
-    SCHEDULE_RMFULL: "36 05 * * SAT"
+    # default: every Saturday at a random minute past 5 am
+    SCHEDULE_RMFULL: "R 5 * * SAT"
 
     # when to remove old incremental backups
-    # default: every sunday at 05:36 am UTC
-    SCHEDULE_RMINCR: "36 05 * * SUN"
+    # default: every Sunday at a random minute past 5 am
+    SCHEDULE_RMINCR: "R 5 * * SUN"
     
     # size of individual duplicity data volumes
     # default: 1GiB
     BACKUP_VOLSIZE: "1024"
     
+    # what to base backups on
+    # default: container directory "/kiwi-backup/source", usually mounted volume(s)
+    BACKUP_SOURCE: "/kiwi-backup/source"
+    
     # where to put backups
-    # default: some docker volume
-    BACKUP_TARGET: "file:///backup/target"
+    # default: container directory "/kiwi-backup/target", usually a mounted volume
+    BACKUP_TARGET: "file:///kiwi-backup/target"
     
     # Additional options for all "duplicity" commands
     OPTIONS_ALL: ""
@@ -175,7 +185,7 @@ Reasonable defaults for a backup encryption key are:
 To quickly generate a key, use the following command, then enter a passphrase:
 
 ```sh
-docker run --rm -it -v "gnupg.tmp:/root/.gnupg" yavook/kiwi-backup gpg --quick-gen-key --yes "Administrator <root@my-hostname.com>" rsa4096 encr never
+docker run --rm -it -v "gnupg.tmp:/root/.gnupg" yavook/kiwi-backup:0.10 gpg --quick-gen-key --yes "Administrator <root@my-hostname.com>" rsa4096 encr never
 ```
 
 To get a more in-depth generation wizard instead, use `gpg --full-gen-key` command without any more args and follow through.
@@ -185,13 +195,13 @@ To get a more in-depth generation wizard instead, use `gpg --full-gen-key` comma
 This one-liner exports your generated key into a new subdirectory "backup":
 
 ```sh
-docker run --rm -it -v "gnupg.tmp:/root/.gnupg" -v "$(pwd)/backup:/root/backup" -e "CURRENT_USER=$(id -u):$(id -g)" yavook/kiwi-backup sh -c 'cd /root/backup && gpg --export-secret-keys --armor > secret.asc && gpg --export-ownertrust > ownertrust.txt && chown -R "${CURRENT_USER}" .'
+docker run --rm -it -v "gnupg.tmp:/root/.gnupg" -v "$(pwd)/backup:/root/backup" -e "CURRENT_USER=$(id -u):$(id -g)" yavook/kiwi-backup:0.10 sh -c 'cd /root/backup && gpg --export-secret-keys --armor > secret.asc && gpg --export-ownertrust > ownertrust.txt && chown -R "${CURRENT_USER}" .'
 ```
 
 You'll now find the "backup" subdirectory with files "secret.asc" and "ownertrust.txt" in it. Check your exported files:
 
 ```sh
-docker run --rm -v "$(pwd)/backup:/root/backup:ro" yavook/kiwi-backup sh -c 'cd /root/backup && gpg --import --batch secret.asc 2>/dev/null && gpg --import-ownertrust ownertrust.txt 2>/dev/null && gpg -k 2>/dev/null | grep -A1 "^pub" | xargs | tail -c17'
+docker run --rm -v "$(pwd)/backup:/root/backup:ro" yavook/kiwi-backup:0.10 sh -c 'cd /root/backup && gpg --import --batch secret.asc 2>/dev/null && gpg --import-ownertrust ownertrust.txt 2>/dev/null && gpg -k 2>/dev/null | grep -A1 "^pub" | xargs | tail -c17'
 ```
 
 This should output your 16-digit Key-ID, so take note of it if you haven't already! Afterwards, run `docker volume rm gnupg.tmp` to get rid of the key generation volume.
@@ -208,7 +218,7 @@ gpg --export-ownertrust > backup/ownertrust.txt
 You can still check your exported files :)
 
 ```sh
-docker run --rm -v "$(pwd)/backup:/root/backup:ro" yavook/kiwi-backup sh -c 'cd /root/backup && gpg --import --batch secret.asc && gpg --import-ownertrust ownertrust.txt && gpg -k'
+docker run --rm -v "$(pwd)/backup:/root/backup:ro" yavook/kiwi-backup:0.10 sh -c 'cd /root/backup && gpg --import --batch secret.asc && gpg --import-ownertrust ownertrust.txt && gpg -k'
 ```
 
 ### Describe local kiwi-backup image
@@ -216,7 +226,7 @@ docker run --rm -v "$(pwd)/backup:/root/backup:ro" yavook/kiwi-backup sh -c 'cd 
 Now create a simple `Dockerfile` inside the "backup" directory from following template.
 
 ```Dockerfile
-FROM yavook/kiwi-backup
+FROM yavook/kiwi-backup:0.10
 
 COPY secret.asc ownertrust.txt /root/
 
@@ -237,7 +247,7 @@ All that's left is to come back to your project's `docker-compose.yml`, where yo
 
 ```yaml
 backup:
-  image: yavook/kiwi-backup
+  image: yavook/kiwi-backup:0.10
   # ...
 ```
 
@@ -253,3 +263,4 @@ That's it -- from now on, all new backups will be encrypted!
 
 ## Offsite Backups
 
+TODO
