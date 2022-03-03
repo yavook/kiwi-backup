@@ -1,0 +1,27 @@
+#!/bin/sh
+
+this_script="$( readlink -f "${0}" )"
+this_dir="${this_script%/*}"
+
+# files
+duplicity_secrets_file="/root/duplicity_secrets"
+
+# load secrets file
+if [ -f "${duplicity_secrets_file}" ]; then
+    # shellcheck disable=SC1090
+    . "${duplicity_secrets_file}"
+fi
+
+# handle more verbose "GPG_PASSPHRASE" env var
+if [ -n "${GPG_PASSPHRASE}" ]; then
+    PASSPHRASE="${GPG_PASSPHRASE:-${PASSPHRASE}}"
+    export PASSPHRASE
+    unset GPG_PASSPHRASE
+fi
+
+# hand over
+set -ex
+exec $( \
+  "${this_dir}/build_command" \
+  "${@}" \
+)
