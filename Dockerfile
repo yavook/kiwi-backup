@@ -81,8 +81,8 @@ ENV \
     #################
     # BACKUP POLICY #
     #################
-    SCHEDULE_BACKUP="R 02 * * *" \
-    SCHEDULE_CLEANUP="R 04 * * *" \
+    SCHEDULE_BACKUP="R 2 * * *" \
+    SCHEDULE_CLEANUP="R 4 * * *" \
     FULL_BACKUP_FREQUENCY=3M \
     BACKUP_RETENTION_TIME=6M \
     KEEP_NUM_FULL_CHAINS=2 \
@@ -90,8 +90,8 @@ ENV \
     ######################
     # ADDITIONAL OPTIONS #
     ######################
-    SCHEDULE_RMFULL="R 05 * * SAT" \
-    SCHEDULE_RMINCR="R 05 * * SUN" \
+    SCHEDULE_RMFULL="R 5 * * SAT" \
+    SCHEDULE_RMINCR="R 5 * * SUN" \
     BACKUP_VOLSIZE=1024 \
     BACKUP_SOURCE="/kiwi-backup/source" \
     BACKUP_TARGET="file:///kiwi-backup/target" \
