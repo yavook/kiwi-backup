@@ -25,11 +25,6 @@ fi
 if [ -n "${GPG_KEY_ID}" ]; then
     # gpg key given
     options_encryption="--encrypt-key=${GPG_KEY_ID}"
-
-    # handle more verbose "GPG_PASSPHRASE" env_var
-    PASSPHRASE="${GPG_PASSPHRASE:-${PASSPHRASE}}"
-    export PASSPHRASE
-    unset GPG_PASSPHRASE
 else
     # no key given
     options_encryption="--no-encryption"
