@@ -19,6 +19,7 @@ RUN set -ex; \
         openssh-client \
         openssl \
         python3 \
+        py3-six \
         rsync \
     ; \
     update-ca-certificates; \
