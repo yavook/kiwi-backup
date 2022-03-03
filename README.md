@@ -185,26 +185,26 @@ Reasonable defaults for a backup encryption key are:
 To quickly generate a key, use the following command, then enter a passphrase:
 
 ```sh
-docker run --rm -it -v "gnupg.tmp:/root/.gnupg" yavook/kiwi-backup:0.10 gpg --quick-gen-key --yes "Administrator <root@my-hostname.com>" rsa4096 encr never
+docker run --rm -it -v "kiwi-backup.gnupg.tmp:/root/.gnupg" yavook/kiwi-backup:0.10 gpg --quick-gen-key --yes "Administrator <root@my-hostname.com>" rsa4096 encr never
 ```
 
 To get a more in-depth generation wizard instead, use `gpg --full-gen-key` command without any more args and follow through.
 
 ### Export the generated key
 
-This one-liner exports your generated key into a new subdirectory "backup":
+This one-liner exports your generated key into a new subdirectory "kiwi-backup.gnupg":
 
 ```sh
-docker run --rm -it -v "gnupg.tmp:/root/.gnupg" -v "$(pwd)/backup:/root/backup" -e "CURRENT_USER=$(id -u):$(id -g)" yavook/kiwi-backup:0.10 sh -c 'cd /root/backup && gpg --export-secret-keys --armor > secret.asc && gpg --export-ownertrust > ownertrust.txt && chown -R "${CURRENT_USER}" .'
+docker run --rm -it -v "kiwi-backup.gnupg.tmp:/root/.gnupg" -v "$(pwd)/kiwi-backup.gnupg:/root/kiwi-backup.gnupg" -e "CURRENT_USER=$(id -u):$(id -g)" yavook/kiwi-backup:0.10 sh -c 'cd /root/kiwi-backup.gnupg && gpg --export-secret-keys --armor > secret.asc && gpg --export-ownertrust > ownertrust.txt && chown -R "${CURRENT_USER}" .'
 ```
 
-You'll now find the "backup" subdirectory with files "secret.asc" and "ownertrust.txt" in it. Check your exported files:
+You'll now find the "kiwi-backup.gnupg" subdirectory with files "secret.asc" and "ownertrust.txt" in it. Check your exported files:
 
 ```sh
-docker run --rm -v "$(pwd)/backup:/root/backup:ro" yavook/kiwi-backup:0.10 sh -c 'cd /root/backup && gpg --import --batch secret.asc 2>/dev/null && gpg --import-ownertrust ownertrust.txt 2>/dev/null && gpg -k 2>/dev/null | grep -A1 "^pub" | xargs | tail -c17'
+docker run --rm -v "$(pwd)/kiwi-backup.gnupg:/root/kiwi-backup.gnupg:ro" yavook/kiwi-backup:0.10 sh -c 'cd /root/kiwi-backup.gnupg && gpg --import --batch secret.asc 2>/dev/null && gpg --import-ownertrust ownertrust.txt 2>/dev/null && gpg -k 2>/dev/null | grep -A1 "^pub" | xargs | tail -c17'
 ```
 
-This should output your 16-digit Key-ID, so take note of it if you haven't already! Afterwards, run `docker volume rm gnupg.tmp` to get rid of the key generation volume.
+This should output your 16-digit Key-ID, so take note of it if you haven't already! Afterwards, run `docker volume rm kiwi-backup.gnupg.tmp` to get rid of the key generation volume.
 
 ### Using a pre-generated key
 
@@ -218,7 +218,7 @@ gpg --export-ownertrust > backup/ownertrust.txt
 You can still check your exported files :)
 
 ```sh
-docker run --rm -v "$(pwd)/backup:/root/backup:ro" yavook/kiwi-backup:0.10 sh -c 'cd /root/backup && gpg --import --batch secret.asc && gpg --import-ownertrust ownertrust.txt && gpg -k'
+docker run --rm -v "$(pwd)/kiwi-backup.gnupg:/root/kiwi-backup.gnupg:ro" yavook/kiwi-backup:0.10 sh -c 'cd /root/kiwi-backup.gnupg && gpg --import --batch secret.asc && gpg --import-ownertrust ownertrust.txt && gpg -k'
 ```
 
 ### Describe local kiwi-backup image
