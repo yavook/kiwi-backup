@@ -19,6 +19,17 @@ if [ -n "${GPG_PASSPHRASE}" ]; then
     unset GPG_PASSPHRASE
 fi
 
+# run webhook
+if [ -n "${WEBHOOK_URL}" ]; then
+    wget_args=""
+    if [ "${WEBHOOK_INSECURE}" = "1" ]; then
+        wget_args="--no-check-certificate"
+    fi
+
+    WEBHOOK_URL="$(echo "${WEBHOOK_URL}" | sed "s,%%MSG%%,running task ${*},g" )"
+    wget -O /dev/null ${wget_args} "${WEBHOOK_URL}"
+fi
+
 # hand over
 set -ex
 exec $( \
