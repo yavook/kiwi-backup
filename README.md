@@ -162,6 +162,12 @@ backup:
     
     # Additional options for "duplicity remove-all-inc-of-but-n-full" command
     OPTIONS_RMINCR: ""
+
+    # Webhook to be pinged on action (use "%%MSG%%" as a placeholder for a message)
+    WEBHOOK_URL: ""
+
+    # Allow self-signed certificates on webhook target
+    WEBHOOK_INSECURE: "0"
 ```
 
 ## Encryption
