@@ -19,6 +19,7 @@ RUN set -ex; \
         openssh-client \
         openssl \
         python3 \
+        py3-pip \
         py3-six \
         rsync \
     ; \
@@ -36,7 +37,6 @@ RUN set -ex; \
         musl-dev \
         openssl-dev \
         python3-dev \
-        py3-pip \
         cargo \
     ; \
     # make use of prebuilt wheels where possible
