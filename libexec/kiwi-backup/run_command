@@ -26,8 +26,8 @@ if [ -n "${WEBHOOK_URL}" ]; then
         wget_args="--no-check-certificate"
     fi
 
-    WEBHOOK_URL="$(echo "${WEBHOOK_URL}" | sed "s,%%MSG%%,running task ${*},g" )"
-    wget -O /dev/null ${wget_args} "${WEBHOOK_URL}"
+    WEBHOOK_URL="$(echo "${WEBHOOK_URL}" | sed "s,%%MSG%%,running%20task%20${*},g" )"
+    wget -O /dev/null ${wget_args} "${WEBHOOK_URL}" 1>/dev/null 2>/dev/null
 fi
 
 # hand over
