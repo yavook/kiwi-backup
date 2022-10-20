@@ -41,15 +41,15 @@ RUN set -ex; \
     ; \
     # make use of prebuilt wheels where possible
     python3 -m pip --no-cache-dir \
-        install --update wheel \
+        install --upgrade wheel \
     ; \
     \
     # install duplicity
     python3 -m pip --no-cache-dir \
-        install --update --requirement /tmp/requirements.txt \
+        install --upgrade --requirement /tmp/requirements.txt \
     ; \
     python3 -m pip --no-cache-dir \
-        install --update duplicity \
+        install --upgrade duplicity \
     ; \
     \
     # cleanup
