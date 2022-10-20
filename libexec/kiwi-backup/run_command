@@ -19,6 +19,19 @@ if [ -n "${GPG_PASSPHRASE}" ]; then
     unset GPG_PASSPHRASE
 fi
 
+run_webhook() {
+    _rw_webhook_url="${1}"
+    _rw_message="${2}"
+
+    _rw_curl_args=""
+    if [ "${WEBHOOK_INSECURE}" = "1" ]; then
+        _rw_curl_args="--insecure"
+    fi
+
+    _rw_webhook_url="$(echo "${_rw_webhook_url}" | sed "s,%%MSG%%,,g" )"
+    curl ${_rw_curl_args} "${_rw_webhook_url}" 1>/dev/null 2>/dev/null
+}
+
 # run start webhook
 curl_args=""
 if [ "${WEBHOOK_INSECURE}" = "1" ]; then
