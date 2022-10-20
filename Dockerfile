@@ -41,20 +41,20 @@ RUN set -ex; \
     ; \
     # make use of prebuilt wheels where possible
     python3 -m pip --no-cache-dir \
-        install wheel \
+        install --update wheel \
     ; \
     \
     # install duplicity
     python3 -m pip --no-cache-dir \
-        install -r /tmp/requirements.txt \
+        install --update --requirement /tmp/requirements.txt \
     ; \
     python3 -m pip --no-cache-dir \
-        install duplicity \
+        install --update duplicity \
     ; \
     \
     # cleanup
     python3 -m pip --no-cache-dir \
-        uninstall -y wheel \
+        uninstall --yes wheel \
     ; \
     apk del --purge .build-deps; \
     rm -f "/tmp/requirements.txt"; \
