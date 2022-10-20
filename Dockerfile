@@ -101,6 +101,8 @@ ENV \
     OPTIONS_CLEANUP="" \
     OPTIONS_RMFULL="" \
     OPTIONS_RMINCR="" \
+    WEBHOOK_URL="" \
+    WEBHOOK_INSECURE="" \
     \
     ##############
     # ENCRYPTION #
