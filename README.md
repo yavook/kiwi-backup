@@ -166,6 +166,9 @@ backup:
     # Webhook to be pinged on action (use "%%MSG%%" as a placeholder for a message)
     WEBHOOK_URL: ""
 
+    # Webhook to be pinged on failed action (use "%%MSG%%" as a placeholder for a message)
+    WEBHOOK_FAIL_URL: ""
+
     # Allow self-signed certificates on webhook target
     WEBHOOK_INSECURE: "0"
 ```

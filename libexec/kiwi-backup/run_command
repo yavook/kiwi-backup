@@ -19,20 +19,32 @@ if [ -n "${GPG_PASSPHRASE}" ]; then
     unset GPG_PASSPHRASE
 fi
 
-# run webhook
-if [ -n "${WEBHOOK_URL}" ]; then
-    wget_args=""
-    if [ "${WEBHOOK_INSECURE}" = "1" ]; then
-        wget_args="--no-check-certificate"
-    fi
+# run start webhook
+curl_args=""
+if [ "${WEBHOOK_INSECURE}" = "1" ]; then
+    curl_args="--insecure"
+fi
 
-    WEBHOOK_URL="$(echo "${WEBHOOK_URL}" | sed "s,%%MSG%%,running%20task%20${*},g" )"
-    wget -O /dev/null ${wget_args} "${WEBHOOK_URL}" 1>/dev/null 2>/dev/null
+if [ -n "${WEBHOOK_URL}" ]; then
+    webhook_url="$(echo "${WEBHOOK_URL}" | sed "s,%%MSG%%,running%20task%20${*},g" )"
+    curl ${curl_args} "${webhook_url}" 1>/dev/null 2>/dev/null
 fi
 
 # hand over
 set -ex
-exec $( \
-  "${this_dir}/build_command" \
-  "${@}" \
-)
+eval "$( \
+    "${this_dir}/build_command" \
+    "${@}" \
+)"
+exit_code="${?}"
+
+# run finish webhook
+if [ "${exit_code}" -eq "0" ] && [ -n "${WEBHOOK_URL}" ]; then
+    webhook_url="$(echo "${WEBHOOK_URL}" | sed "s,%%MSG%%,task%20${*}%20finished%20successfully,g" )"
+    curl ${curl_args} "${webhook_url}" 1>/dev/null 2>/dev/null
+
+elif [ "${exit_code}" -ne "0" ] && [ -n "${WEBHOOK_URL}" ]; then
+    webhook_fail_url="$(echo "${WEBHOOK_FAIL_URL:-${WEBHOOK_URL}}" | sed "s,%%MSG%%,task%20${*}%20finished%20with%20status%20${exit_code},g" )"
+    curl ${curl_args} "${webhook_fail_url}" 1>/dev/null 2>/dev/null
+
+fi
