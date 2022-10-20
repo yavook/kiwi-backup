@@ -19,29 +19,24 @@ if [ -n "${GPG_PASSPHRASE}" ]; then
     unset GPG_PASSPHRASE
 fi
 
-run_webhook() {
-    _rw_webhook_url="${1}"
-    _rw_message="${2}"
+run_webhook() { #url #message
+    if [ -z "${WEBHOOK_URL}" ]; then
+        return 1
+    fi
+
+    _rw_message="$(echo "${2}" | sed "s,\s,%20,g" )"
+    _rw_webhook_url="$(echo "${1}" | sed "s,%%MSG%%,${_rw_message},g" )"
 
     _rw_curl_args=""
     if [ "${WEBHOOK_INSECURE}" = "1" ]; then
         _rw_curl_args="--insecure"
     fi
 
-    _rw_webhook_url="$(echo "${_rw_webhook_url}" | sed "s,%%MSG%%,,g" )"
     curl ${_rw_curl_args} "${_rw_webhook_url}" 1>/dev/null 2>/dev/null
 }
 
 # run start webhook
-curl_args=""
-if [ "${WEBHOOK_INSECURE}" = "1" ]; then
-    curl_args="--insecure"
-fi
-
-if [ -n "${WEBHOOK_URL}" ]; then
-    webhook_url="$(echo "${WEBHOOK_URL}" | sed "s,%%MSG%%,running%20task%20${*},g" )"
-    curl ${curl_args} "${webhook_url}" 1>/dev/null 2>/dev/null
-fi
+run_webhook "${WEBHOOK_URL}" "running task ${*}"
 
 # hand over
 set -ex
@@ -49,15 +44,13 @@ eval "$( \
     "${this_dir}/build_command" \
     "${@}" \
 )"
-exit_code="${?}"
+exit_status="${?}"
 
 # run finish webhook
-if [ "${exit_code}" -eq "0" ] && [ -n "${WEBHOOK_URL}" ]; then
-    webhook_url="$(echo "${WEBHOOK_URL}" | sed "s,%%MSG%%,task%20${*}%20finished%20successfully,g" )"
-    curl ${curl_args} "${webhook_url}" 1>/dev/null 2>/dev/null
+if [ "${exit_status}" -eq "0" ]; then
+    run_webhook "${WEBHOOK_URL}" "task ${*} successful"
 
-elif [ "${exit_code}" -ne "0" ] && [ -n "${WEBHOOK_URL}" ]; then
-    webhook_fail_url="$(echo "${WEBHOOK_FAIL_URL:-${WEBHOOK_URL}}" | sed "s,%%MSG%%,task%20${*}%20finished%20with%20status%20${exit_code},g" )"
-    curl ${curl_args} "${webhook_fail_url}" 1>/dev/null 2>/dev/null
+else
+    run_webhook "${WEBHOOK_FAIL_URL:-${WEBHOOK_URL}}" "task ${*} failed, status ${exit_status}"
 
 fi
