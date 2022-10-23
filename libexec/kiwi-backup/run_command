@@ -6,22 +6,6 @@ this_dir="${this_script%/*}"
 # files
 duplicity_secrets_file="/root/duplicity_secrets"
 
-run_webhook() { #url #message
-    if [ -z "${WEBHOOK_URL}" ]; then
-        return 1
-    fi
-
-    _rw_message="$(echo "${2}" | sed "s,\s,%20,g" )"
-    _rw_webhook_url="$(echo "${1}" | sed "s,%%MSG%%,${_rw_message},g" )"
-
-    _rw_curl_args=""
-    if [ "${WEBHOOK_INSECURE}" = "1" ]; then
-        _rw_curl_args="--insecure"
-    fi
-
-    curl ${_rw_curl_args} "${_rw_webhook_url}" 1>/dev/null 2>/dev/null
-}
-
 # load secrets file
 if [ -f "${duplicity_secrets_file}" ]; then
     # shellcheck disable=SC1090
@@ -36,7 +20,8 @@ if [ -n "${GPG_PASSPHRASE}" ]; then
 fi
 
 # run start webhook
-run_webhook "${WEBHOOK_URL}" "running task ${*}"
+/usr/local/libexec/kiwi-cron/run_webhook \
+    "${WEBHOOK_URL}" "running task ${*}" "${WEBHOOK_INSECURE}"
 
 # hand over
 set -ex
@@ -48,9 +33,11 @@ exit_status="${?}"
 
 # run finish webhook
 if [ "${exit_status}" -eq "0" ]; then
-    run_webhook "${WEBHOOK_URL}" "task ${*} successful"
+    /usr/local/libexec/kiwi-cron/run_webhook \
+        "${WEBHOOK_URL}" "task ${*} successful" "${WEBHOOK_INSECURE}"
 
 else
-    run_webhook "${WEBHOOK_FAIL_URL:-${WEBHOOK_URL}}" "task ${*} failed, status ${exit_status}"
+    /usr/local/libexec/kiwi-cron/run_webhook \
+        "${WEBHOOK_FAIL_URL:-${WEBHOOK_URL}}" "task ${*} failed, status ${exit_status}" "${WEBHOOK_INSECURE}"
 
 fi
