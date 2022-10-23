@@ -9,6 +9,7 @@ RUN set -ex; \
     # duplicity software dependencies
     apk --no-cache add \
         ca-certificates \
+        curl \
         gettext \
         gnupg \
         lftp \
@@ -101,6 +102,9 @@ ENV \
     OPTIONS_CLEANUP="" \
     OPTIONS_RMFULL="" \
     OPTIONS_RMINCR="" \
+    WEBHOOK_URL="" \
+    WEBHOOK_FAIL_URL="" \
+    WEBHOOK_INSECURE="" \
     \
     ##############
     # ENCRYPTION #
