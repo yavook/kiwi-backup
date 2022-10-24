@@ -14,7 +14,7 @@ If you want backups in the host directory `/var/local/kiwi.backup`, just add thi
 
 ```yaml
 backup:
-  image: yavook/kiwi-backup:0.10
+  image: yavook/kiwi-backup:0.12
   volumes:
     - "${KIWI_INSTANCE}:/kiwi-backup/source:ro"
     - "/var/local/kiwi.backup:/kiwi-backup/target"
@@ -95,14 +95,14 @@ There are three major ways to for inject secrets into `kiwi-backup` environments
 
 #### Container environment
 
-Just fire up your container using `docker run -e "FTP_PASSWORD=my_secret_here" yavook/kiwi-backup:0.10`
+Just fire up your container using `docker run -e "FTP_PASSWORD=my_secret_here" yavook/kiwi-backup:0.12`
 
 #### Image environment
 
 Create a simple `Dockerfile` from following template.
 
 ```Dockerfile
-FROM yavook/kiwi-backup:0.10
+FROM yavook/kiwi-backup:0.12
 ENV FTP_PASSWORD="my_secret_here"
 ```
 
@@ -194,7 +194,7 @@ Reasonable defaults for a backup encryption key are:
 To quickly generate a key, use the following command, then enter a passphrase:
 
 ```sh
-docker run --rm -it -v "kiwi-backup.gnupg.tmp:/root/.gnupg" yavook/kiwi-backup:0.10 gpg --quick-gen-key --yes "Administrator <root@my-hostname.com>" rsa4096 encr never
+docker run --rm -it -v "kiwi-backup.gnupg.tmp:/root/.gnupg" yavook/kiwi-backup:0.12 gpg --quick-gen-key --yes "Administrator <root@my-hostname.com>" rsa4096 encr never
 ```
 
 To get a more in-depth generation wizard instead, use `gpg --full-gen-key` command without any more args and follow through.
@@ -204,13 +204,13 @@ To get a more in-depth generation wizard instead, use `gpg --full-gen-key` comma
 This one-liner exports your generated key into a new subdirectory "kiwi-backup.gnupg":
 
 ```sh
-docker run --rm -it -v "kiwi-backup.gnupg.tmp:/root/.gnupg" -v "$(pwd)/kiwi-backup.gnupg:/root/kiwi-backup.gnupg" -e "CURRENT_USER=$(id -u):$(id -g)" yavook/kiwi-backup:0.10 sh -c 'cd /root/kiwi-backup.gnupg && gpg --export-secret-keys --armor > secret.asc && gpg --export-ownertrust > ownertrust.txt && chown -R "${CURRENT_USER}" .'
+docker run --rm -it -v "kiwi-backup.gnupg.tmp:/root/.gnupg" -v "$(pwd)/kiwi-backup.gnupg:/root/kiwi-backup.gnupg" -e "CURRENT_USER=$(id -u):$(id -g)" yavook/kiwi-backup:0.12 sh -c 'cd /root/kiwi-backup.gnupg && gpg --export-secret-keys --armor > secret.asc && gpg --export-ownertrust > ownertrust.txt && chown -R "${CURRENT_USER}" .'
 ```
 
 You'll now find the "kiwi-backup.gnupg" subdirectory with files "secret.asc" and "ownertrust.txt" in it. Check your exported files:
 
 ```sh
-docker run --rm -v "$(pwd)/kiwi-backup.gnupg:/root/kiwi-backup.gnupg:ro" yavook/kiwi-backup:0.10 sh -c 'cd /root/kiwi-backup.gnupg && gpg --import --batch secret.asc 2>/dev/null && gpg --import-ownertrust ownertrust.txt 2>/dev/null && gpg -k 2>/dev/null | grep -A1 "^pub" | xargs | tail -c17'
+docker run --rm -v "$(pwd)/kiwi-backup.gnupg:/root/kiwi-backup.gnupg:ro" yavook/kiwi-backup:0.12 sh -c 'cd /root/kiwi-backup.gnupg && gpg --import --batch secret.asc 2>/dev/null && gpg --import-ownertrust ownertrust.txt 2>/dev/null && gpg -k 2>/dev/null | grep -A1 "^pub" | xargs | tail -c17'
 ```
 
 This should output your 16-digit Key-ID, so take note of it if you haven't already! Afterwards, run `docker volume rm kiwi-backup.gnupg.tmp` to get rid of the key generation volume.
@@ -227,7 +227,7 @@ gpg --export-ownertrust > backup/ownertrust.txt
 You can still check your exported files :)
 
 ```sh
-docker run --rm -v "$(pwd)/kiwi-backup.gnupg:/root/kiwi-backup.gnupg:ro" yavook/kiwi-backup:0.10 sh -c 'cd /root/kiwi-backup.gnupg && gpg --import --batch secret.asc && gpg --import-ownertrust ownertrust.txt && gpg -k'
+docker run --rm -v "$(pwd)/kiwi-backup.gnupg:/root/kiwi-backup.gnupg:ro" yavook/kiwi-backup:0.12 sh -c 'cd /root/kiwi-backup.gnupg && gpg --import --batch secret.asc && gpg --import-ownertrust ownertrust.txt && gpg -k'
 ```
 
 ### Describe local kiwi-backup image
@@ -235,7 +235,7 @@ docker run --rm -v "$(pwd)/kiwi-backup.gnupg:/root/kiwi-backup.gnupg:ro" yavook/
 Now create a simple `Dockerfile` inside the "backup" directory from following template.
 
 ```Dockerfile
-FROM yavook/kiwi-backup:0.10
+FROM yavook/kiwi-backup:0.12
 
 COPY secret.asc ownertrust.txt /root/
 
@@ -256,7 +256,7 @@ All that's left is to come back to your project's `docker-compose.yml`, where yo
 
 ```yaml
 backup:
-  image: yavook/kiwi-backup:0.10
+  image: yavook/kiwi-backup:0.12
   # ...
 ```
 

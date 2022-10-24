@@ -20,7 +20,7 @@ if [ -n "${GPG_PASSPHRASE}" ]; then
 fi
 
 # run start webhook
-/usr/local/libexec/kiwi-cron/run_webhook \
+/usr/local/libexec/kiwi-backup/run_webhook \
     "${WEBHOOK_URL}" "running task ${*}" "${WEBHOOK_INSECURE}"
 
 # hand over
@@ -33,11 +33,11 @@ exit_status="${?}"
 
 # run finish webhook
 if [ "${exit_status}" -eq "0" ]; then
-    /usr/local/libexec/kiwi-cron/run_webhook \
+    /usr/local/libexec/kiwi-backup/run_webhook \
         "${WEBHOOK_URL}" "task ${*} successful" "${WEBHOOK_INSECURE}"
 
 else
-    /usr/local/libexec/kiwi-cron/run_webhook \
+    /usr/local/libexec/kiwi-backup/run_webhook \
         "${WEBHOOK_FAIL_URL:-${WEBHOOK_URL}}" "task ${*} failed, status ${exit_status}" "${WEBHOOK_INSECURE}"
 
 fi
