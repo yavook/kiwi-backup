@@ -6,9 +6,8 @@ webhook_insecure="${3:-0}"
 
 
 if [ -z "${webhook_url}" ]; then
-    return 1
+    exit 1
 fi
-
 
 curl_args=""
 if [ "${webhook_insecure}" = "1" ]; then
