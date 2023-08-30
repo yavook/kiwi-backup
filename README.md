@@ -34,10 +34,11 @@ Be aware though -- backups will use a fair bit of storage space!
 
 ### Version `0.13`
 
-- **Changed default backup policy**
+**Changed default backup policy**
 - *old:* full backup 3 months, keep 6 months, keep 2 chains
 - *new:* full backup 1 week, keep 1 month, keep 3 chains
-- **Changed environment variable names**
+
+**Changed environment variable names**
 - *old:* `FULL_BACKUP_FREQUENCY`, `BACKUP_RETENTION_TIME`, `KEEP_NUM_FULL_CHAINS`
 - *new:* `POLICY_FULL_BACKUP_FREQUENCY`, `POLICY_BACKUP_RETENTION_TIME`, `POLICY_KEEP_NUM_CHAINS`
 
