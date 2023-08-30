@@ -23,12 +23,23 @@ backup:
 - backups the entire service data directory
 - stores all backup data on the host file system
 - daily incremental backups at night 
-- a new full backup once every 3 months
-- keeps backups up to 6 months old
-- keeps daily backups for two recent sets (3-6 months)
+- a new full backup once every week
+- keeps backups up to 1 month old
+- keeps daily backups for three recent sets (2-3 weeks)
 - backup jobs run at a random minute past 2 am
 
 Be aware though -- backups will use a fair bit of storage space!
+
+## Changes
+
+### Version `0.13`
+
+- **Changed default backup policy**
+- *old:* full backup 3 months, keep 6 months, keep 2 chains
+- *new:* full backup 1 week, keep 1 month, keep 3 chains
+- **Changed environment variable names**
+- *old:* `FULL_BACKUP_FREQUENCY`, `BACKUP_RETENTION_TIME`, `KEEP_NUM_FULL_CHAINS`
+- *new:* `POLICY_FULL_BACKUP_FREQUENCY`, `POLICY_BACKUP_RETENTION_TIME`, `POLICY_KEEP_NUM_CHAINS`
 
 ## Customization
 
@@ -75,16 +86,16 @@ backup:
     SCHEDULE_CLEANUP: "R 4 * * *"
     
     # how often to opt for a full backup
-    # default: every 3 months
-    FULL_BACKUP_FREQUENCY: "3M"
+    # default: every week
+    POLICY_FULL_BACKUP_FREQUENCY: "1W"
 
     # how long to keep backups at all
-    # default: 6 months
-    BACKUP_RETENTION_TIME: "6M"
+    # default: 1 month
+    POLICY_BACKUP_RETENTION_TIME: "1M"
     
-    # how many full backup chains with incrementals to keep
-    # default: 2
-    KEEP_NUM_FULL_CHAINS: "2"
+    # how many backup chains with incrementals to keep
+    # default: 3
+    POLICY_KEEP_NUM_CHAINS: "3"
 ```
 
 ### Handling Secrets
